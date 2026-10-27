@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RepoCortex — Repository-Aware Coding Assistant</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-area">
+      <span class="logo-icon">🧠</span>
+      <div>
+        <div class="logo-title">RepoCortex</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">Repository-Aware Coding Assistant</div>
+      </div>
+    </div>
+
+    <div class="status-badges">
+      <span id="badge-permission" class="badge badge-success">MODE: SAFE_EXEC</span>
+      <span id="badge-files" class="badge badge-info">Files: --</span>
+      <span id="badge-symbols" class="badge badge-info">Symbols: --</span>
+      <button id="btn-reindex" class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;">🔄 Re-index</button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    <!-- Left Sidebar: Files & Symbols -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Codebase Navigator</span>
+        <span id="file-count" style="font-size: 12px; color: var(--text-secondary);">0 files</span>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" id="symbol-search-input" class="input-text" placeholder="Search symbols or files...">
+      </div>
+      <div id="sidebar-list" class="sidebar-list">
+        <!-- Dynamically populated files & symbols -->
+      </div>
+    </aside>
+
+    <!-- Main Content Tabs -->
+    <main class="content-area">
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="tab-investigate">🔍 Investigate & Fix</button>
+        <button class="tab-btn" data-tab="tab-repomap">🗺️ Repository Map</button>
+        <button class="tab-btn" data-tab="tab-tests">🧪 Sandboxed Test Runner</button>
+        <button class="tab-btn" data-tab="tab-audit">🔐 Cryptographic Audit Trail</button>
+        <button class="tab-btn" data-tab="tab-benchmark">⚡ Evaluation Benchmark</button>
+      </nav>
+
+      <!-- TAB 1: Investigate & Fix -->
+      <section id="tab-investigate" class="tab-content active">
+        <div class="card">
+          <div class="card-title">Bug Investigation & Patch Synthesis</div>
+          <div class="prompt-container">
+            <textarea id="prompt-input" class="prompt-textarea" placeholder="Describe a bug to investigate, or request a change (e.g. 'Fix off-by-one pagination bug in pagination.py')..."></textarea>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button id="btn-investigate" class="btn btn-outline">🔎 Investigate</button>
+              <button id="btn-fix" class="btn btn-primary">🛠️ Propose & Test Fix</button>
+            </div>
+          </div>
+
+          <div class="quick-prompts">
+            <span class="chip" data-prompt="The paginator helper in pagination.py returns one item too many on each page due to an off-by-one slice calculation.">💡 Fix Off-by-One Pagination</span>
+            <span class="chip" data-prompt="Session store in cache.py uses a mutable default argument items=[] which leaks session items across different user calls.">💡 Fix Mutable Default Cache Leak</span>
+            <span class="chip" data-prompt="Statistical calculator in stats.py crashes with ZeroDivisionError when compute_average is passed an empty list.">💡 Fix Empty List ZeroDivision</span>
+            <span class="chip" data-prompt="Authorization check in auth.py allows non-admin users to access admin resources because it checks user.role != 'guest'.">💡 Fix Role Authorization Bypass</span>
+          </div>
+        </div>
+
+        <!-- Investigation / Analysis Output -->
+        <div id="investigation-card" class="card" style="display: none;">
+          <div class="card-title">Analysis & Suspected Symbols</div>
+          <div id="investigation-content" style="white-space: pre-wrap; line-height: 1.6; font-size: 14px;"></div>
+        </div>
+
+        <!-- Patch Review & Permission Gate Card -->
+        <div id="patch-card" class="card" style="display: none;">
+          <div class="card-title">
+            <span>Proposed Patch Review</span>
+            <span id="patch-status-badge" class="badge badge-success">Sandbox Verified</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            Review the unified diff below. The assistant executed unit tests inside a temporary isolated sandbox.
+          </p>
+          <div id="diff-output" class="diff-container"></div>
+          <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="btn-reject-patch" class="btn btn-outline">Reject Patch</button>
+            <button id="btn-apply-patch" class="btn btn-success">✓ Authorize & Apply to Codebase</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Repository Map -->
+      <section id="tab-repomap" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Compact Repository Map & Symbol Hierarchy</span>
+            <button id="btn-refresh-map" class="btn btn-outline" style="font-size: 12px; padding: 4px 8px;">Refresh Map</button>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            High-level outline of files, classes, methods, and PageRank architectural centrality scores.
+          </p>
+          <div id="repomap-output" class="terminal-box" style="color: #c9d1d9;">Loading repository map...</div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Sandboxed Test Runner -->
+      <section id="tab-tests" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Sandbox Test Suite Runner</span>
+            <button id="btn-run-tests" class="btn btn-primary">▶ Run Tests in Sandbox</button>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Total Tests</div>
+              <div id="test-total" class="metric-value" style="color: var(--accent);">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Passed</div>
+              <div id="test-passed" class="metric-value" style="color: #3fb950;">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Failed / Errors</div>
+              <div id="test-failed" class="metric-value" style="color: #f85149;">--</div>
+            </div>
+          </div>
+          <div id="test-console" class="terminal-box">Ready to execute tests in sandboxed isolation. Click "Run Tests in Sandbox" to begin.</div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Cryptographic Audit Trail -->
+      <section id="tab-audit" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Tamper-Evident SHA-256 Audit Ledger</span>
+            <button id="btn-verify-audit" class="btn btn-success">🛡️ Verify SHA-256 Hash Chain</button>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Every action, query, patch proposal, test execution, and permission check is cryptographically chained into an append-only log.
+          </p>
+          <div id="audit-verify-alert" style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px;"></div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Seq</th>
+                <th>Timestamp (UTC)</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Status</th>
+                <th>SHA-256 Digest</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">Loading audit trail...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 5: Evaluation Benchmark -->
+      <section id="tab-benchmark" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>Automated Bug-Fix Evaluation Benchmark</span>
+            <button id="btn-run-benchmark" class="btn btn-primary">⚡ Execute Full Benchmark Suite</button>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Evaluates RepoCortex against real bug-fixing scenarios (Mini-SWE-bench style) and measures localization accuracy, patch test pass rates, and security boundary compliance.
+          </p>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Bug Localization</div>
+              <div id="bench-loc-rate" class="metric-value">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Patch Test Pass Rate</div>
+              <div id="bench-pass-rate" class="metric-value">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Safety Compliance</div>
+              <div id="bench-safety-rate" class="metric-value" style="color: #3fb950;">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Audit Trail Integrity</div>
+              <div id="bench-audit-rate" class="metric-value" style="color: #3fb950;">--</div>
+            </div>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Task ID</th>
+                <th>Bug Description</th>
+                <th>Category</th>
+                <th>Localized</th>
+                <th>Tests Passed</th>
+                <th>Safety</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody id="bench-table-body">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">Click "Execute Full Benchmark Suite" to evaluate against real bugs.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

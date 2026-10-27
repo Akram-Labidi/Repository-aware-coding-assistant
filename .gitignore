@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.bak
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# RepoCortex storage (local index and audit files)
+.repocortex/
+demo_repo/.repocortex/
+
+# Testing caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE files
+.vscode/
+.idea/
