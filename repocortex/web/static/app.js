@@ -10,6 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const sidebarList = document.getElementById("sidebar-list");
   const symbolSearchInput = document.getElementById("symbol-search-input");
 
+  // Deep Search Elements
+  const deepSearchInput = document.getElementById("deep-search-input");
+  const btnDeepSearch = document.getElementById("btn-deep-search");
+  const searchResultsCard = document.getElementById("search-results-card");
+  const searchResultsTitle = document.getElementById("search-results-title");
+  const searchCountBadge = document.getElementById("search-count-badge");
+  const searchResultsList = document.getElementById("search-results-list");
+
   const promptInput = document.getElementById("prompt-input");
   const btnInvestigate = document.getElementById("btn-investigate");
   const btnFix = document.getElementById("btn-fix");
@@ -62,11 +70,122 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Quick prompt chips
-  document.querySelectorAll(".chip").forEach((chip) => {
+  document.querySelectorAll(".chip[data-prompt]").forEach((chip) => {
     chip.addEventListener("click", () => {
       promptInput.value = chip.getAttribute("data-prompt");
     });
   });
+
+  // Search chips
+  document.querySelectorAll(".chip[data-search]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const q = chip.getAttribute("data-search");
+      if (deepSearchInput) deepSearchInput.value = q;
+      performSearch(q);
+    });
+  });
+
+  // Deep Search Functionality
+  async function performSearch(query) {
+    if (!query || !query.trim()) return;
+
+    // Switch to search tab if not active
+    const searchTabBtn = document.querySelector('.tab-btn[data-tab="tab-search"]');
+    if (searchTabBtn && !searchTabBtn.classList.contains("active")) {
+      searchTabBtn.click();
+    }
+
+    if (deepSearchInput) deepSearchInput.value = query;
+    if (btnDeepSearch) btnDeepSearch.textContent = "Searching...";
+    searchResultsCard.style.display = "block";
+    searchResultsTitle.textContent = `Search Results for "${query}"`;
+    searchResultsList.innerHTML = '<div style="color: var(--text-secondary); padding: 12px;">Querying AST symbols and BM25 index...</div>';
+
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query.trim(), limit: 15 }),
+      });
+      const data = await res.json();
+      const results = data.results || [];
+
+      searchCountBadge.textContent = `${results.length} matches`;
+
+      if (results.length === 0) {
+        searchResultsList.innerHTML = '<div style="color: var(--text-secondary); padding: 12px;">No matching symbols or files found. Try re-indexing or adjusting your query.</div>';
+        return;
+      }
+
+      searchResultsList.innerHTML = "";
+      results.forEach((r, idx) => {
+        const item = document.createElement("div");
+        item.style.backgroundColor = "var(--bg-primary)";
+        item.style.border = "1px solid var(--border-color)";
+        item.style.borderRadius = "6px";
+        item.style.padding = "14px";
+
+        const symName = r.symbol ? r.symbol.qualified_name : r.file_path;
+        const symKind = r.symbol ? r.symbol.kind : "file";
+        const linesInfo = r.start_line ? `lines ${r.start_line}-${r.end_line}` : "";
+
+        let snippetHtml = "";
+        if (r.snippet) {
+          const escaped = r.snippet.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          snippetHtml = `<pre class="diff-container" style="margin-top: 8px; padding: 8px; font-size: 11px; max-height: 120px; overflow-y: auto;"><code>${escaped}</code></pre>`;
+        }
+
+        item.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge" style="text-transform: uppercase; font-size: 10px;">${symKind}</span>
+              <strong style="color: var(--text-primary); font-size: 14px;">${symName}</strong>
+              <span style="font-size: 12px; color: var(--text-secondary);">${r.file_path} (${linesInfo})</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge badge-info" style="font-size: 11px;">${r.match_type.toUpperCase()} (score ${r.score})</span>
+              <button class="btn btn-outline btn-inspect-sym" style="padding: 4px 10px; font-size: 11px;">🔍 Investigate</button>
+            </div>
+          </div>
+          ${snippetHtml}
+        `;
+
+        item.querySelector(".btn-inspect-sym").addEventListener("click", () => {
+          promptInput.value = `Investigate symbol ${symName} in ${r.file_path} (lines ${linesInfo})`;
+          document.querySelector('.tab-btn[data-tab="tab-investigate"]').click();
+          btnInvestigate.click();
+        });
+
+        searchResultsList.appendChild(item);
+      });
+    } catch (e) {
+      searchResultsList.innerHTML = `<div style="color: var(--danger); padding: 12px;">Error performing search: ${e.message}</div>`;
+    } finally {
+      if (btnDeepSearch) btnDeepSearch.textContent = "Search";
+    }
+  }
+
+  if (btnDeepSearch) {
+    btnDeepSearch.addEventListener("click", () => {
+      performSearch(deepSearchInput.value);
+    });
+  }
+
+  if (deepSearchInput) {
+    deepSearchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        performSearch(deepSearchInput.value);
+      }
+    });
+  }
+
+  if (symbolSearchInput) {
+    symbolSearchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        performSearch(symbolSearchInput.value);
+      }
+    });
+  }
 
   // Fetch initial status
   async function loadStatus() {

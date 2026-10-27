@@ -44,15 +44,45 @@
     <!-- Main Content Tabs -->
     <main class="content-area">
       <nav class="tabs-nav">
-        <button class="tab-btn active" data-tab="tab-investigate">🔍 Investigate & Fix</button>
+        <button class="tab-btn active" data-tab="tab-search">🔎 Symbol & Code Search</button>
+        <button class="tab-btn" data-tab="tab-investigate">🛠️ Investigate & Fix</button>
         <button class="tab-btn" data-tab="tab-repomap">🗺️ Repository Map</button>
         <button class="tab-btn" data-tab="tab-tests">🧪 Sandboxed Test Runner</button>
         <button class="tab-btn" data-tab="tab-audit">🔐 Cryptographic Audit Trail</button>
         <button class="tab-btn" data-tab="tab-benchmark">⚡ Evaluation Benchmark</button>
       </nav>
 
-      <!-- TAB 1: Investigate & Fix -->
-      <section id="tab-investigate" class="tab-content active">
+      <!-- TAB: Search -->
+      <section id="tab-search" class="tab-content active">
+        <div class="card">
+          <div class="card-title">Hybrid Symbol & BM25 Code Search</div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            Search across AST symbols, class hierarchies, call graphs, and subword tokens (handles camelCase, snake_case).
+          </p>
+          <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+            <input type="text" id="deep-search-input" class="input-text" style="font-size: 14px; padding: 10px 14px;" placeholder="Search symbol name, function, class, or keyword (e.g. 'DiscountCalculator', 'session', 'average')...">
+            <button id="btn-deep-search" class="btn btn-primary" style="padding: 10px 20px;">Search</button>
+          </div>
+          <div class="quick-prompts">
+            <span class="chip" data-search="DiscountCalculator">DiscountCalculator</span>
+            <span class="chip" data-search="compute_average">compute_average</span>
+            <span class="chip" data-search="SessionCache">SessionCache</span>
+            <span class="chip" data-search="paginate_items">paginate_items</span>
+            <span class="chip" data-search="calculate_backoff">calculate_backoff</span>
+          </div>
+        </div>
+
+        <div id="search-results-card" class="card" style="display: none;">
+          <div class="card-title">
+            <span id="search-results-title">Search Results</span>
+            <span id="search-count-badge" class="badge badge-info">0 matches</span>
+          </div>
+          <div id="search-results-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+      </section>
+
+      <!-- TAB: Investigate & Fix -->
+      <section id="tab-investigate" class="tab-content">
         <div class="card">
           <div class="card-title">Bug Investigation & Patch Synthesis</div>
           <div class="prompt-container">
